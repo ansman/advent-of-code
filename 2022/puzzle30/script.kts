@@ -18,6 +18,13 @@ data class Sensor(val position: Point, val beacon: Point) {
     val maxY get() = position.y + beaconDistance
 
     fun canHaveBeaconAt(point: Point): Boolean = position.manhattanDistanceTo(point) > beaconDistance
+
+    fun rangeAt(y: Int): IntRange? {
+        val radius = radiusOfEmptySpaceAt(y)
+        return if (radius < 0) null
+        else (position.x - radius)..(position.x + radius)
+    }
+
     fun stepXUntilPotentialBeacon(x: Int, y: Int): Int {
         val radius = radiusOfEmptySpaceAt(y)
         if (radius < 0) return x
@@ -52,20 +59,20 @@ val maxY = max
 val beacons = sensors.mapTo(mutableSetOf()) { it.beacon }
 var y = minY
 outer@while (y <= maxY) {
-    var x = minX
-    while (x <= maxX) {
-        val xAtStart = x
-        for (sensor in sensors) {
-            x = sensor.stepXUntilPotentialBeacon(x, y)
+    val x = sensors.mapNotNull { it.rangeAt(y) }.sortedBy { it.start }.fold(minX) { x, range ->
+        if (x in range) {
+            range.endInclusive + 1
+        } else {
+            x
         }
-        if (x == xAtStart) {
-            require(sensors.all { it.canHaveBeaconAt(Point(x, y)) })
+    }
+    if (x in minX..maxX) {
+        require(sensors.all { it.canHaveBeaconAt(Point(x, y)) })
 
-            // X did not jump, it's empty
-            println("Found empty space at $x, $y")
-            println("Frequency: ${x * 4000000L + y}")
-            break@outer
-        }
+        // X did not jump, it's empty
+        println("Found empty space at $x, $y")
+        println("Frequency: ${x * 4000000L + y}")
+        break@outer
     }
     ++y
 }
