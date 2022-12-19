@@ -3,6 +3,12 @@
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.script.dependencies.ScriptContents
+import kotlin.time.Duration.Companion.nanoseconds
+
+val start = System.nanoTime()
+Runtime.getRuntime().addShutdownHook(Thread {
+    println("Total runtime ${(System.nanoTime() - start).nanoseconds}")
+})
 
 data class Coordinate(val x: Long, val y: Long, val z: Long)
 
