@@ -3,6 +3,9 @@
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.time.TimeSource
+
+val start = TimeSource.Monotonic.markNow()
 
 val gamePattern = Regex("""Card\s+\d+:\s+""")
 val numberSplit = Regex("""\s+""")
@@ -34,3 +37,4 @@ while (pendingCards.isNotEmpty()) {
 
 println(playedCards)
 
+println(start.elapsedNow())
