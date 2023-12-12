@@ -65,11 +65,11 @@ fun repair(
     // If the next is a spring this can't be a group because groups are continuous
     if (springs.getOrNull(springStart + groupSize) == '#') {
         if (debug) println("  Next is whole, can't be group")
-        return runNextGroup()
+        return@getOrPut runNextGroup()
     }
 
     // We consume one more than the group size because the next character cannot be a group start
-    return runNextGroup() + repair(springs, groups, springStart + groupSize + 1, groupIndex + 1, cache)
+    runNextGroup() + repair(springs, groups, springStart + groupSize + 1, groupIndex + 1, cache)
 }
 
 generateSequence(::readlnOrNull)
