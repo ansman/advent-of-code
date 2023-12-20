@@ -1,0 +1,125 @@
+#!/usr/bin/env kotlin
+
+import java.util.*
+import kotlin.time.TimeSource
+
+val start = TimeSource.Monotonic.markNow()
+val debug = false
+
+sealed class Module {
+    abstract val name: String
+    abstract val connections: List<String>
+
+    abstract fun prime(input: Module)
+    abstract fun receiveFrom(module: Module, pulse: Pulse): Pulse?
+
+    companion object {
+        fun parse(line: String): Module {
+            val typeAndName = line.substringBefore(" -> ")
+            val connections = line.substringAfter(" -> ").split(", ")
+            return when {
+                typeAndName.startsWith('%') -> FlipFlop(typeAndName.drop(1), connections)
+                typeAndName.startsWith('&') -> Conjunction(typeAndName.drop(1), connections)
+                typeAndName.startsWith("broadcaster") -> Broadcaster(connections)
+                else -> error("Unknown type: $line")
+            }
+        }
+    }
+
+    data object Button : Module() {
+        override val name: String get() = "button"
+        override val connections: List<String> get() = listOf("broadcaster")
+
+        override fun prime(input: Module) {}
+        override fun receiveFrom(module: Module, pulse: Pulse): Pulse =
+                error("Button should not receive pulses")
+    }
+
+    data class Broadcaster(override val connections: List<String>) : Module() {
+        override val name: String get() = "broadcaster"
+
+        override fun prime(input: Module) {}
+        override fun receiveFrom(module: Module, pulse: Pulse): Pulse = pulse
+    }
+
+    data class FlipFlop(override val name: String, override val connections: List<String>) : Module() {
+        private var on = false
+
+        override fun prime(input: Module) {}
+
+        override fun receiveFrom(module: Module, pulse: Pulse): Pulse? =
+                when (pulse) {
+                    Pulse.Low -> when (on) {
+                        false -> {
+                            on = true
+                            Pulse.High
+                        }
+
+                        true -> {
+                            on = false
+                            Pulse.Low
+                        }
+                    }
+
+                    Pulse.High -> null
+                }
+    }
+
+    data class Conjunction(override val name: String, override val connections: List<String>) : Module() {
+        private val lastPulses = mutableMapOf<String, Pulse>()
+
+        override fun prime(input: Module) {
+            lastPulses[input.name] = Pulse.Low
+        }
+
+        override fun receiveFrom(module: Module, pulse: Pulse): Pulse {
+            lastPulses[module.name] = pulse
+            return if (lastPulses.values.all { it == Pulse.High }) Pulse.Low else Pulse.High
+        }
+    }
+}
+
+enum class Pulse {
+    Low,
+    High
+}
+
+val modules = generateSequence(::readlnOrNull)
+        .map(Module::parse)
+        .associateBy { it.name }
+
+for (module in modules.values) {
+    for (connection in module.connections) {
+        modules[connection]?.prime(module)
+    }
+}
+
+var high = 0L
+var low = 0L
+repeat(if (debug) 4 else 1000) {
+    if (debug) {
+        println("Round ${it + 1}")
+        println("------")
+    }
+    val queue = LinkedList<Pair<Module, Pulse>>(listOf(Module.Button to Pulse.Low))
+    while (queue.isNotEmpty()) {
+        val (originator, pulse) = queue.removeFirst()
+        for (connection in originator.connections) {
+            when (pulse) {
+                Pulse.Low -> ++low
+                Pulse.High -> ++high
+            }
+            if (debug) println("${originator.name} -${pulse.name}-> $connection")
+            val connectionModule = modules[connection] ?: continue
+            val transmit = connectionModule.receiveFrom(originator, pulse) ?: continue
+            queue.add(connectionModule to transmit)
+        }
+    }
+    if (debug) println("")
+}
+
+println("High: $high")
+println("Low: $low")
+println(high * low)
+
+println(start.elapsedNow())
