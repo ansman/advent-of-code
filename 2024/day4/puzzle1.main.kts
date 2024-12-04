@@ -8,14 +8,11 @@ val width = grid[0].length
 val height = grid.size
 val target = "XMAS"
 fun matches(x: Int, y: Int, dx: Int, dy: Int, offset: Int = 0): Boolean =
-    if (x !in 0 until width || y !in 0 until height) {
-        false
-    } else if (grid[y][x] != target[offset]) {
-        false
-    } else if (offset == target.lastIndex) {
-        true
-    } else {
-        matches(x + dx, y + dy, dx, dy, offset + 1)
+    when {
+        x !in 0 until width || y !in 0 until height -> false
+        grid[y][x] != target[offset] -> false
+        offset == target.lastIndex -> true
+        else -> matches(x + dx, y + dy, dx, dy, offset + 1)
     }
 
 var found = 0
