@@ -27,23 +27,13 @@ fun List<Int>.isValid(): Boolean {
     return true
 }
 
-fun List<Int>.order(): List<Int> = toMutableList().apply {
-    while (true) {
-        var didReorder = false
-        for (i in 0 until lastIndex) {
-            val a = get(i)
-            val b = get(i + 1)
-            val rb = ordering[b] ?: continue
-            if (a in rb) {
-                val tmp = get(i)
-                set(i, get(i + 1))
-                set(i + 1, tmp)
-                didReorder = true
-            }
-        }
-        if (!didReorder) {
-            break
-        }
+fun List<Int>.order(): List<Int> = sortedWith { a, b ->
+    val ra = ordering[b]
+    val rb = ordering[b]
+    when {
+        rb?.contains(a) == true -> -1
+        ra?.contains(b) == true -> 1
+        else -> 0
     }
 }
 
