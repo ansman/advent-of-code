@@ -10,64 +10,59 @@ fun debug(msg: Any?) {
     }
 }
 
-class Sequence private constructor(private val sequence: ByteArray) {
-    constructor() : this(ByteArray(size))
-    constructor(b1: Byte, b2: Byte, b3: Byte, b4: Byte) : this(byteArrayOf(b1, b2, b3, b4))
+class Sequence private constructor(
+    private val b1: Byte,
+    private val b2: Byte,
+    private val b3: Byte,
+    private val b4: Byte
+) {
+    val id = (b1 + 9) * 19 * 19 * 19 + (b2 + 9) * 19 * 19 + (b3 + 9) * 19 + (b4 + 9)
+    constructor() : this(0, 0, 0, 0)
 
-    override fun hashCode(): Int = sequence.contentHashCode()
+    override fun hashCode(): Int = id
     override fun equals(other: Any?): Boolean =
-        other === this || other is Sequence && sequence.contentEquals(other.sequence)
+        other === this || other is Sequence && id == other.id
 
-    operator fun plus(number: Byte): Sequence {
-        val newSequence = ByteArray(size)
-        sequence.copyInto(newSequence, startIndex = 1)
-        newSequence[sequence.lastIndex] = number
-        return Sequence(newSequence)
-    }
+    operator fun plus(number: Byte): Sequence = Sequence(b2, b3, b4, number)
 
-    override fun toString(): String = sequence.joinToString(",")
-
-    companion object {
-        const val size = 4
-    }
+    override fun toString(): String = "$b1,$b2,$b3,$b4"
 }
 
 class Bananas {
     var count: Long = 0
         private set
 
-    private val seenNumbers = mutableSetOf<Int>()
-    private val bananas = mutableListOf<Byte>()
+    private val seenNumbers = BooleanArray(2500)
 
-    fun addForNumber(number: Int, bananas: Byte) {
-        if (seenNumbers.add(number)) {
+    fun addForNumber(number: Int, bananas: Long) {
+        if (!seenNumbers[number]) {
             count += bananas
-            this.bananas += bananas
+            seenNumbers[number] = true
         }
     }
 
     override fun toString(): String = count.toString()
 }
 
-val bananasPerSequence = mutableMapOf<Sequence, Bananas>()
+val bananasPerSequence = HashMap<Sequence, Bananas>(50000)
 
 fun runIteration(number: Long): Long {
     var num = number
     num = (num xor (num shl 6)) % 16777216
-    num = (num xor (num ushr 5)) % 16777216
+    num = (num xor (num ushr 5))
     num = (num xor (num shl 11)) % 16777216
     return num
 }
 
 fun computeSequences(id: Int, number: Long, numbers: Int) {
     var num = number
-    var prev = (number % 10).toByte()
+    var prev = number % 10
     var sequence = Sequence()
     repeat(numbers - 1) {
         num = runIteration(num)
-        val bananas = (num % 10).toByte()
+        val bananas = num % 10
         sequence += (bananas - prev).toByte()
-        if (it >= Sequence.size - 1) {
+        if (it >= 3) {
             bananasPerSequence.getOrPut(sequence, ::Bananas).addForNumber(id, bananas)
         }
         prev = bananas
@@ -77,7 +72,7 @@ fun computeSequences(id: Int, number: Long, numbers: Int) {
 generateSequence { readlnOrNull() }
     .forEachIndexed { i, num -> computeSequences(i, num.toLong(), 2000) }
 
-val mostBananas = bananasPerSequence.entries.maxBy { it.value.count }
-println(mostBananas.value)
+val mostBananas = bananasPerSequence.values.maxBy { it.count }
+println(mostBananas)
 
 println("Ran in ${startTime.elapsedNow()}")
