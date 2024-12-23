@@ -28,13 +28,13 @@ class Sequence private constructor(
     override fun toString(): String = "$b1,$b2,$b3,$b4"
 }
 
-class Bananas {
+class Bananas : Comparable<Bananas> {
     var count: Long = 0
         private set
 
     private val seenNumbers = BooleanArray(2500)
 
-    fun addForNumber(number: Int, bananas: Long) {
+    fun addForNumber(number: Int, bananas: Long): Bananas = apply {
         if (!seenNumbers[number]) {
             count += bananas
             seenNumbers[number] = true
@@ -42,9 +42,12 @@ class Bananas {
     }
 
     override fun toString(): String = count.toString()
+
+    override fun compareTo(other: Bananas): Int = count.compareTo(other.count)
 }
 
-val bananasPerSequence = HashMap<Sequence, Bananas>(50000)
+val bananasPerSequence = arrayOfNulls<Bananas>(19 * 19 * 19 * 19)
+var mostBananas = Bananas()
 
 fun runIteration(number: Long): Long {
     var num = number
@@ -62,8 +65,8 @@ fun computeSequences(id: Int, number: Long, numbers: Int) {
         num = runIteration(num)
         val bananas = num % 10
         sequence += (bananas - prev).toByte()
-        if (it >= 3) {
-            bananasPerSequence.getOrPut(sequence, ::Bananas).addForNumber(id, bananas)
+        if (it >= 3 && bananas > 0) {
+            mostBananas = maxOf(mostBananas, (bananasPerSequence[sequence.id] ?: Bananas().also { bananasPerSequence[sequence.id] = it }).addForNumber(id, bananas))
         }
         prev = bananas
     }
@@ -72,7 +75,6 @@ fun computeSequences(id: Int, number: Long, numbers: Int) {
 generateSequence { readlnOrNull() }
     .forEachIndexed { i, num -> computeSequences(i, num.toLong(), 2000) }
 
-val mostBananas = bananasPerSequence.values.maxBy { it.count }
 println(mostBananas)
 
 println("Ran in ${startTime.elapsedNow()}")
